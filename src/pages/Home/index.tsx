@@ -19,11 +19,6 @@ const newCycleFormValidationSchema = zod.object({
     minutesAmount: zod.number().min(5).max(60, 'The cycle is limited to 60 mins max.')
 })
 
-// interface NewCycleFormData {
-//     task: string
-//     minutesAmount: number
-// }
-
 type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>;
 
 interface Cycle {
