@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { createContext, useEffect, useState } from "react";
 import {HandPalm, Play} from 'phosphor-react';
 
 import {differenceInSeconds} from 'date-fns'
@@ -12,6 +12,7 @@ import { CountDown } from "./components/CountDown";
 
 
 
+
 interface Cycle {
     id: string;
     task: string;
@@ -20,6 +21,13 @@ interface Cycle {
     interruptedDate?: Date; 
     finishedDate?: Date;
 }
+interface CyclesContextType{
+    activeCycle: Cycle | undefined
+    activeCycleId: string | null
+    markCurrentCycleAsFinished: ()=> void
+}
+
+export const CyclesContext = createContext({} as CyclesContextType)
 
 export default function Home() {
     const [cycles, setCycles] = useState<Cycle[]>([])
@@ -27,10 +35,7 @@ export default function Home() {
 
 
     const activeCycle:Cycle | undefined = cycles.find(cycle => cycle.id === activeCycleId)
-
-
-
-   
+ 
 
     function handleCreateNewCycle(data:NewCycleFormData){
         const id = String(new Date().getTime());
@@ -54,19 +59,18 @@ export default function Home() {
         }))
         setActiveCycleId(null)
     }
-    const currentSecondsAmount = activeCycle ? totalSeconds - secondsAmountPassed : 0;
-    const minutesAmount = Math.floor(currentSecondsAmount / 60);
-    const secondsAmount = currentSecondsAmount %60;
+   
+    function markCurrentCycleAsFinished(){
+        setCycles((state)=>
+            state.map((cycle)=>{
+                if(cycle.id === activeCycleId){
+                    return{...cycle, finishedDate: new Date()}
+                }
+                else return cycle
 
-    const minutes = String(minutesAmount).padStart(2, '0')
-    const seconds = String(secondsAmount).padStart(2, '0')
-
-    useEffect(()=>{
-        if(activeCycle){
-            document.title = `${minutes}:${seconds}`
-        }
-    },[minutes,seconds, activeCycle])
-    
+            })
+        )
+    }
 
     const task = watch('task');
     const isSubmitDisabled = !task;
@@ -74,9 +78,10 @@ export default function Home() {
     return (
         <HomeContainer>
             <form onSubmit={handleSubmit(handleCreateNewCycle)} action="">
-                <NewCycleForm/>
-                <CountDown activeCycle={activeCycle} setCycles={setCycles} activeCycleId={activeCycleId}/>    
-            
+                <CyclesContext.Provider value={{activeCycle, activeCycleId, markCurrentCycleAsFinished}}>
+                    <NewCycleForm/>
+                    <CountDown/>    
+                </CyclesContext.Provider>
                 {activeCycle ? (
                     <StopCountdownButton type="button" onClick={handleStopCycle}>
                         <HandPalm size={24}/>
