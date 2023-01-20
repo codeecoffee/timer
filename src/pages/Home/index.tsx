@@ -1,7 +1,8 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { useContext } from "react";
 import {HandPalm, Play} from 'phosphor-react';
-
-import {differenceInSeconds} from 'date-fns'
+import { FormProvider, useForm } from 'react-hook-form';
+import {zodResolver} from '@hookform/resolvers/zod';
+import * as zod from 'zod';
 import { 
     HomeContainer, 
     StartCountdownButton, 
@@ -9,81 +10,45 @@ import {
 } from "./styles";
 import { NewCycleForm } from "./components/NewCycleForm";
 import { CountDown } from "./components/CountDown";
+import { CyclesContext } from "../../contexts/CyclesContext";
 
-
-
-
-interface Cycle {
-    id: string;
-    task: string;
-    minutesAmount: number;
-    startDate: Date;
-    interruptedDate?: Date; 
-    finishedDate?: Date;
-}
-interface CyclesContextType{
-    activeCycle: Cycle | undefined
-    activeCycleId: string | null
-    markCurrentCycleAsFinished: ()=> void
-}
-
-export const CyclesContext = createContext({} as CyclesContextType)
 
 export default function Home() {
-    const [cycles, setCycles] = useState<Cycle[]>([])
-    const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
+    const {activeCycle,createNewCycle, stopCurrentCycle} = useContext(CyclesContext)
 
+    const newCycleFormValidationSchema = zod.object({
+        task: zod.string().min(1,'Name your task'),
+        minutesAmount: zod.number().min(5).max(60, 'The cycle is limited to 60 mins max.')
+    })
+    
+    type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>;
 
-    const activeCycle:Cycle | undefined = cycles.find(cycle => cycle.id === activeCycleId)
- 
-
-    function handleCreateNewCycle(data:NewCycleFormData){
-        const id = String(new Date().getTime());
-        const newCycle:Cycle = {
-            id,
-            task: data.task,
-            minutesAmount: data.minutesAmount,
-            startDate: new Date()
+    const newCycleForm = useForm<NewCycleFormData>({
+        resolver: zodResolver(newCycleFormValidationSchema),
+        defaultValues: {
+            task: '',
+            minutesAmount: 0,
         }
-        setCycles((state)=>[...state, newCycle])
-        setActiveCycleId(id);
-        setSecondsAmountPassed(0)
-        reset();
+    });
+
+    function handleCreateNewCycle(data: NewCycleFormData){
+        createNewCycle(data)
+        reset()
     }
 
-    function handleStopCycle(){
-        setCycles((state) =>
-            state.map(cycle=>{
-            if(cycle.id === activeCycleId) return {...cycle, interruptedDate: new Date ()}
-            else return cycle
-        }))
-        setActiveCycleId(null)
-    }
-   
-    function markCurrentCycleAsFinished(){
-        setCycles((state)=>
-            state.map((cycle)=>{
-                if(cycle.id === activeCycleId){
-                    return{...cycle, finishedDate: new Date()}
-                }
-                else return cycle
-
-            })
-        )
-    }
-
+    const {handleSubmit, watch, reset} = newCycleForm;
     const task = watch('task');
     const isSubmitDisabled = !task;
 
     return (
         <HomeContainer>
             <form onSubmit={handleSubmit(handleCreateNewCycle)} action="">
-                <CyclesContext.Provider value={{activeCycle, activeCycleId, markCurrentCycleAsFinished}}>
-                    <NewCycleForm/>
-                    <CountDown/>    
-                </CyclesContext.Provider>
+                    <FormProvider {...newCycleForm}>
+                        <NewCycleForm/>
+                    </FormProvider>
+                    <CountDown/>             
                 {activeCycle ? (
-                    <StopCountdownButton type="button" onClick={handleStopCycle}>
+                    <StopCountdownButton type="button" onClick={stopCurrentCycle}>
                         <HandPalm size={24}/>
                         Stop
                     </StopCountdownButton>
@@ -93,8 +58,6 @@ export default function Home() {
                         Start
                     </StartCountdownButton>
                 )}
-  
-
             </form>
         </HomeContainer>
     )
