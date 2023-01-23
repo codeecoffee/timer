@@ -23,7 +23,7 @@ export default function History() {
                             <tr key={cycle.id}>
                             <td>{cycle.task}</td>
                             <td>{cycle.minutesAmount} min</td>
-                            <td>{formatDistanceToNow(cycle.startDate,{addSuffix:true})}</td>
+                            <td>{formatDistanceToNow(new Date(cycle.startDate),{addSuffix:true})}</td>
                             <td>
                                 {cycle.finishedDate && 
                                     (<Status statusColor="green">Finished</Status>)
